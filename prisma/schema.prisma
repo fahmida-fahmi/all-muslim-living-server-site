@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== CORE USER MODEL ====================
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  phone       String?
+  avatar      String?
+  dateOfBirth DateTime?
+  gender      Gender?
+
+  // User Role - ONE ROLE PER USER
+  role UserRole @default(USER)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  // Relations
+  postedJobs   Job[]         @relation("CompanyJobs")
+  applications Application[] @relation("UserApplications")
+  savedJobs    SavedJob[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// ==================== ENUMS ====================
+enum Gender {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum UserRole {
+  USER // General user
+  JOB_SEEKER // Looking for jobs
+  EMPLOYER // Posting jobs
+  SERVICE_PROVIDER // Offering services
+  BUSINESS_OWNER // Restaurant, Shop, Health center owner
+  WRITER // Writer's corner contributor
+  EVENT_ORGANIZER // Organizing events
+  CHARITY_ORG // Charity organization
+  VOLUNTEER // Volunteer for charity
+  PRAYER_PLACE_ADMIN // Managing prayer places
+  MATRIMONY_SEEKER // Looking for marriage
+  ADMIN // Platform admin
+  SUPER_ADMIN // Super admin
+}
+
+enum JobType {
+  REMOTE
+  FULL_TIME
+  PART_TIME
+  INTERSHIP
+  CONTRACT
+}
+
+enum ApplicationStatus {
+  APPLIED
+  IN_REVIEW
+  REJECTED
+  ACCEPTED
+  NOTAPPLY
+}
+
+model Job {
+  id           String  @id @default(uuid())
+  title        String
+  description  String  @db.Text
+  requirements String  @db.Text
+  location     String?
+  category     String?
+  type         JobType
+
+  // Foreign key to User (company/employer)
+  companyId String
+  company   User    @relation("CompanyJobs", fields: [companyId], references: [id], onDelete: Cascade)
+  salaryMin Int?
+  salaryMax Int?
+  isClosed  Boolean @default(false)
+
+  // Timestamps 
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  // Relation (add these later when you create these models)
+  applications Application[]
+  savedJobs    SavedJob[]
+
+  @@index([companyId])
+  @@index([category])
+  @@index([type])
+  @@index([isClosed])
+  @@map("jobs")
+}
+
+// Placeholder models (you'll create these later)
+model Application {
+  id String @id @default(uuid())
+
+  // foreign key to job 
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // foreign key to user (applicant)
+  applicantId String
+  applicant   User   @relation("UserApplications", fields: [applicantId], references: [id], onDelete: Cascade)
+
+  resume String? //URL or file path
+  status ApplicationStatus @default(NOTAPPLY)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([jobId, applicantId])
+  @@index([applicantId])
+  @@index([jobId])
+  @@index([status])
+  @@map("applications")
+}
+
+model SavedJob {
+  id String @id @default(uuid())
+
+  // foreign key to user (jobseeker)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // foreign key to job
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // Timestamps 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@map("saved_jobs")
+}
