@@ -1,144 +1,134 @@
+// src/jobs/jobs.service.ts
+
 import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { QueryJobDto } from './dto/query-job.dto';
+import { FilterJobDto } from './dto/filter-job.dto';
 
 @Injectable()
 export class JobsService {
   constructor(private prisma: PrismaService) {}
 
-  async createJob(companyId: string, createJobDto: CreateJobDto) {
-    // Validate salary range if both are provided
-    if (createJobDto.salaryMin && createJobDto.salaryMax) {
-      if (createJobDto.salaryMin > createJobDto.salaryMax) {
-        throw new ForbiddenException(
-          'Minimum salary cannot be greater than maximum salary',
-        );
+  // ============================================
+  // CREATE JOB
+  // ============================================
+  async create(userId: string, createJobDto: CreateJobDto) {
+    const slug = this.generateSlug(createJobDto.title);
+
+    let uniqueSlug = slug;
+    let counter = 1;
+    while (await this.prisma.job.findUnique({ where: { slug: uniqueSlug } })) {
+      uniqueSlug = `${slug}-${counter++}`;
+    }
+
+    if (createJobDto.companyId) {
+      const company = await this.prisma.company.findUnique({
+        where: { id: createJobDto.companyId },
+        include: { teamMembers: true },
+      });
+
+      if (!company) {
+        throw new NotFoundException('Company not found');
+      }
+
+      const hasAccess =
+        company.ownerId === userId ||
+        company.teamMembers.some((member) => member.id === userId);
+
+      if (!hasAccess) {
+        throw new ForbiddenException('You do not have access to this company');
       }
     }
 
-    const job = await this.prisma.job.create({
-      data: {
-        ...createJobDto,
-        companyId,
+    const jobData: any = {
+      title: createJobDto.title,
+      slug: uniqueSlug,
+      description: createJobDto.description,
+      requirements: createJobDto.requirements,
+      responsibilities: createJobDto.responsibilities,
+      category: createJobDto.category,
+      jobType: createJobDto.jobType,
+      experience: createJobDto.experience,
+      education: createJobDto.education,
+      skills: createJobDto.skills ?? [],
+      salaryMin: createJobDto.salaryMin,
+      salaryMax: createJobDto.salaryMax,
+      salaryCurrency: createJobDto.salaryCurrency,
+      benefits: createJobDto.benefits ?? [],
+      location: createJobDto.location,
+      city: createJobDto.city,
+      totalPositions: createJobDto.totalPositions,
+      isFeatured: createJobDto.isFeatured,
+      metaTitle: createJobDto.metaTitle,
+      metaDescription: createJobDto.metaDescription,
+      poster: {
+        connect: { id: userId },
       },
-      include: {
+      // ✅ OPTIONAL RELATION
+      ...(createJobDto.companyId && {
         company: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
-          },
+          connect: { id: createJobDto.companyId },
         },
-      },
-    });
-
-    return {
-      message: 'Job created successfully',
-      job,
+      }),
+      applicationDeadline: createJobDto.applicationDeadline
+        ? new Date(createJobDto.applicationDeadline)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     };
-  }
 
-  async updateJob(
-    jobId: string,
-    companyId: string,
-    updateJobDto: UpdateJobDto,
-  ) {
-    // Check if job exists
-    const job = await this.prisma.job.findUnique({
-      where: { id: jobId },
-    });
-
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
-
-    // Check if the company owns this job
-    if (job.companyId !== companyId) {
-      throw new ForbiddenException('You are not authorized to update this job');
-    }
-
-    // Validate salary range if both are provided
-    if (updateJobDto.salaryMin && updateJobDto.salaryMax) {
-      if (updateJobDto.salaryMin > updateJobDto.salaryMax) {
-        throw new ForbiddenException(
-          'Minimum salary cannot be greater than maximum salary',
-        );
-      }
-    }
-
-    const updatedJob = await this.prisma.job.update({
-      where: { id: jobId },
-      data: updateJobDto,
+    return this.prisma.job.create({
+      data: jobData,
       include: {
+        poster: {
+          select: {
+            id: true,
+            firstName: true,
+            email: true,
+            avatar: true,
+          },
+        },
         company: {
           select: {
             id: true,
-            email: true,
-            role: true,
+            name: true,
+            logo: true,
+            city: true,
           },
         },
       },
     });
-
-    return {
-      message: 'Job updated successfully',
-      job: updatedJob,
-    };
   }
 
-  // Get single job by ID
-  async getJobById(jobId: string) {
-    const job = await this.prisma.job.findUnique({
-      where: { id: jobId },
-      include: {
-        company: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
-          },
-        },
-        _count: {
-          select: {
-            applications: true,
-          },
-        },
-      },
-    });
-
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
-
-    return job;
-  }
-
-  // Get all jobs with filters, search, and pagination
-  async getAllJobs(queryDto: QueryJobDto) {
+  // ============================================
+  // GET ALL JOBS (with filters & pagination)
+  // ============================================
+  async findAll(filterDto: FilterJobDto) {
     const {
       search,
-      category,
-      type,
-      location,
+      city,
+      jobType,
+      experience,
+      skills,
       salaryMin,
       salaryMax,
-      isClosed,
+      isRemote,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
       sortOrder = 'desc',
-    } = queryDto;
+    } = filterDto;
 
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: any = {
+      isActive: true,
+    };
 
     // Search in title and description
     if (search) {
@@ -148,109 +138,484 @@ export class JobsService {
       ];
     }
 
-    if (category) {
-      where.category = category;
+    if (city) {
+      where.city = { contains: city, mode: 'insensitive' };
     }
 
-    if (type) {
-      where.type = type;
+    if (jobType) {
+      where.jobType = jobType;
     }
 
-    if (location) {
-      where.location = { contains: location, mode: 'insensitive' };
+    if (experience) {
+      where.experience = experience;
     }
 
-    if (salaryMin !== undefined || salaryMax !== undefined) {
-      where.AND = where.AND || [];
-
-      if (salaryMin !== undefined) {
-        where.AND.push({
-          OR: [{ salaryMax: { gte: salaryMin } }, { salaryMax: null }],
-        });
-      }
-
-      if (salaryMax !== undefined) {
-        where.AND.push({
-          OR: [{ salaryMin: { lte: salaryMax } }, { salaryMin: null }],
-        });
-      }
+    // Filter by skills (has any of the skills)
+    if (skills && skills.length > 0) {
+      where.skills = {
+        hasSome: skills,
+      };
     }
 
-    if (isClosed !== undefined) {
-      where.isClosed = isClosed;
+    // Salary range filter
+    if (salaryMin) {
+      where.salaryMin = { gte: parseInt(salaryMin.toString()) };
     }
 
-    // Get total count for pagination
-    const total = await this.prisma.job.count({ where });
+    if (salaryMax) {
+      where.salaryMax = { lte: parseInt(salaryMax.toString()) };
+    }
 
-    // Get jobs with pagination
-    const jobs = await this.prisma.job.findMany({
-      where,
-      skip,
+    if (isRemote !== undefined) {
+      where.isRemote = isRemote;
+    }
+
+    // Check if applicationDeadline hasn't passed
+    where.applicationDeadline = {
+      gte: new Date(),
+    };
+
+    // Execute query with pagination
+    const [jobs, total] = await Promise.all([
+      this.prisma.job.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          poster: {
+            select: {
+              id: true,
+              firstName: true,
+              avatar: true,
+            },
+          },
+          company: {
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+              city: true,
+            },
+          },
+          _count: {
+            select: {
+              applications: true,
+            },
+          },
+        },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+      }),
+      this.prisma.job.count({ where }),
+    ]);
+
+    return {
+      jobs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    };
+  }
+
+  // ============================================
+  // GET SINGLE JOB BY ID
+  // ============================================
+  async findOne(id: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { id },
+      include: {
+        poster: {
+          select: {
+            id: true,
+            firstName: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+            description: true,
+            city: true,
+            website: true,
+          },
+        },
+        _count: {
+          select: {
+            applications: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    // Increment view count
+    await this.prisma.job.update({
+      where: { id },
+      data: { views: { increment: 1 } },
+    });
+
+    return job;
+  }
+
+  // ============================================
+  // GET JOB BY SLUG
+  // ============================================
+  async findBySlug(slug: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { slug },
+      include: {
+        poster: {
+          select: {
+            id: true,
+            firstName: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+            description: true,
+            city: true,
+            website: true,
+          },
+        },
+        _count: {
+          select: {
+            applications: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    // Increment view count
+    await this.prisma.job.update({
+      where: { slug },
+      data: { views: { increment: 1 } },
+    });
+
+    return job;
+  }
+
+  // ============================================
+  // GET USER'S POSTED JOBS
+  // ============================================
+  async findUserJobs(userId: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [jobs, total] = await Promise.all([
+      this.prisma.job.findMany({
+        where: { posterId: userId },
+        skip,
+        take: limit,
+        include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+            },
+          },
+          _count: {
+            select: {
+              applications: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.job.count({ where: { posterId: userId } }),
+    ]);
+
+    return {
+      jobs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  // ============================================
+  // GET COMPANY JOBS
+  // ============================================
+  async findCompanyJobs(companyId: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [jobs, total] = await Promise.all([
+      this.prisma.job.findMany({
+        where: { companyId, isActive: true },
+        skip,
+        take: limit,
+        include: {
+          _count: {
+            select: {
+              applications: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.job.count({ where: { companyId, isActive: true } }),
+    ]);
+
+    return {
+      jobs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  // ============================================
+  // UPDATE JOB
+  // ============================================
+  async update(id: string, userId: string, updateJobDto: UpdateJobDto) {
+    const job = await this.prisma.job.findUnique({
+      where: { id },
+      include: {
+        company: {
+          include: {
+            teamMembers: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    // Check if user has permission to update
+    const isOwner = job.posterId === userId;
+    const isCompanyOwner = job.company?.ownerId === userId;
+    const isTeamMember = job.company?.teamMembers.some(
+      (member) => member.id === userId,
+    );
+
+    if (!isOwner && !isCompanyOwner && !isTeamMember) {
+      throw new ForbiddenException(
+        'You do not have permission to update this job',
+      );
+    }
+
+    // Update job
+    const updatedJob = await this.prisma.job.update({
+      where: { id },
+      data: {
+        ...updateJobDto,
+        applicationDeadline: updateJobDto.applicationDeadline
+          ? new Date(updateJobDto.applicationDeadline)
+          : undefined,
+      },
+      include: {
+        poster: {
+          select: {
+            id: true,
+            firstName: true,
+            avatar: true,
+          },
+        },
+        company: {
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+          },
+        },
+      },
+    });
+
+    return updatedJob;
+  }
+
+  // ============================================
+  // DELETE JOB (Soft delete - set isActive to false)
+  // ============================================
+  async remove(id: string, userId: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { id },
+      include: {
+        company: {
+          include: {
+            teamMembers: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    // Check permission
+    const isOwner = job.posterId === userId;
+    const isCompanyOwner = job.company?.ownerId === userId;
+    const isTeamMember = job.company?.teamMembers.some(
+      (member) => member.id === userId,
+    );
+
+    if (!isOwner && !isCompanyOwner && !isTeamMember) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this job',
+      );
+    }
+
+    // Soft delete
+    await this.prisma.job.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    return { message: 'Job deleted successfully' };
+  }
+
+  // ============================================
+  // TOGGLE JOB ACTIVE STATUS
+  // ============================================
+  async toggleActive(id: string, userId: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { id },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.posterId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this job',
+      );
+    }
+
+    const updatedJob = await this.prisma.job.update({
+      where: { id },
+      data: { isActive: !job.isActive },
+    });
+
+    return updatedJob;
+  }
+
+  // ============================================
+  // GET JOB STATISTICS
+  // ============================================
+  async getJobStats(jobId: string, userId: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.posterId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to view these statistics',
+      );
+    }
+
+    const [
+      totalApplications,
+      pendingApplications,
+      shortlistedApplications,
+      acceptedApplications,
+      rejectedApplications,
+    ] = await Promise.all([
+      this.prisma.jobApplication.count({ where: { jobId } }),
+      this.prisma.jobApplication.count({ where: { jobId, status: 'PENDING' } }),
+      this.prisma.jobApplication.count({
+        where: { jobId, status: 'SHORTLISTED' },
+      }),
+      this.prisma.jobApplication.count({
+        where: { jobId, status: 'ACCEPTED' },
+      }),
+      this.prisma.jobApplication.count({
+        where: { jobId, status: 'REJECTED' },
+      }),
+    ]);
+
+    return {
+      views: job.views,
+      totalApplications,
+      pendingApplications,
+      shortlistedApplications,
+      acceptedApplications,
+      rejectedApplications,
+      isActive: job.isActive,
+      applicationDeadline: job.applicationDeadline,
+      daysRemaining: job.applicationDeadline
+        ? Math.ceil(
+            (job.applicationDeadline.getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24),
+          )
+        : null,
+    };
+  }
+
+  // ============================================
+  // SEARCH SIMILAR JOBS
+  // ============================================
+  async findSimilar(jobId: string, limit = 5) {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    // Find jobs with similar skills or in same city
+    const similarJobs = await this.prisma.job.findMany({
+      where: {
+        id: { not: jobId },
+        isActive: true,
+        OR: [
+          { skills: { hasSome: job.skills } },
+          { city: job.city },
+          { jobType: job.jobType },
+        ],
+      },
       take: limit,
-      orderBy: { [sortBy]: sortOrder },
       include: {
         company: {
           select: {
             id: true,
-            email: true,
-            role: true,
-          },
-        },
-        _count: {
-          select: {
-            applications: true,
+            name: true,
+            logo: true,
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
     });
 
-    return {
-      data: jobs,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return similarJobs;
   }
 
-  // Get jobs posted by a specific company
-  async getJobsByCompany(companyId: string, queryDto: any) {
-    const { page = 1, limit = 10, isClosed } = queryDto;
-    const skip = (page - 1) * limit;
-
-    const where: any = { companyId };
-
-    if (isClosed !== undefined) {
-      where.isClosed = isClosed;
-    }
-
-    const total = await this.prisma.job.count({ where });
-
-    const jobs = await this.prisma.job.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: {
-            applications: true,
-          },
-        },
-      },
-    });
-
-    return {
-      data: jobs,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+  // ============================================
+  // HELPER: Generate slug from title
+  // ============================================
+  private generateSlug(title: string): string {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 }

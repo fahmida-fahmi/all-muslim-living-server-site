@@ -5,8 +5,11 @@ import {
   IsEnum,
   IsBoolean,
   Min,
+  IsDateString,
+  IsArray,
 } from 'class-validator';
 import { JobType } from '@prisma/client';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateJobDto {
   @IsString()
@@ -23,7 +26,7 @@ export class UpdateJobDto {
 
   @IsString()
   @IsOptional()
-  location?: string;
+  responsibilities?: string;
 
   @IsString()
   @IsOptional()
@@ -31,19 +34,83 @@ export class UpdateJobDto {
 
   @IsEnum(JobType)
   @IsOptional()
-  type?: JobType;
+  jobType?: JobType;
+
+  @IsString()
+  @IsOptional()
+  experience?: string;
+
+  @IsString()
+  @IsOptional()
+  education?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') return value.split(',').map((s) => s.trim());
+    return value;
+  })
+  skills?: string[];
 
   @IsInt()
   @Min(0)
   @IsOptional()
+  @Type(() => Number)
   salaryMin?: number;
 
   @IsInt()
   @Min(0)
   @IsOptional()
+  @Type(() => Number)
   salaryMax?: number;
+
+  @IsString()
+  @IsOptional()
+  salaryCurrency?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') return value.split(',').map((s) => s.trim());
+    return value;
+  })
+  benefits?: string[];
+
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @IsOptional()
+  @IsDateString()
+  applicationDeadline?: string;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  totalPositions?: number;
 
   @IsBoolean()
   @IsOptional()
-  isClosed?: boolean;
+  @Transform(({ value }) => value === 'true' || value === true)
+  isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isFeatured?: boolean;
+
+  @IsString()
+  @IsOptional()
+  metaTitle?: string;
+
+  @IsString()
+  @IsOptional()
+  metaDescription?: string;
+
+  @IsString()
+  @IsOptional()
+  companyId?: string;
 }

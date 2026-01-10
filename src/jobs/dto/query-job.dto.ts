@@ -5,8 +5,9 @@ import {
   IsInt,
   Min,
   IsBoolean,
+  Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { JobType } from '@prisma/client';
 
 export class QueryJobDto {
@@ -20,40 +21,60 @@ export class QueryJobDto {
 
   @IsOptional()
   @IsEnum(JobType)
-  type?: JobType;
+  jobType?: JobType;
 
   @IsOptional()
   @IsString()
   location?: string;
 
   @IsOptional()
-  @Type(() => Number)
+  @IsString()
+  companyId?: string;
+
+  @IsOptional()
+  @IsString()
+  skills?: string; // Comma-separated
+
+  @IsOptional()
   @IsInt()
   @Min(0)
+  @Type(() => Number)
   salaryMin?: number;
 
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
   @Min(0)
+  @Type(() => Number)
   salaryMax?: number;
 
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
-  isClosed?: boolean;
+  isActive?: boolean;
 
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isFeatured?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   page?: number = 1;
 
   @IsOptional()
-  @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100)
+  @Type(() => Number)
   limit?: number = 10;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  offset?: number = 0;
 
   @IsOptional()
   @IsString()

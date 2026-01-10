@@ -1,68 +1,129 @@
+// src/jobs/jobs.controller.ts
+
 import {
   Controller,
-  Post,
-  Patch,
   Get,
+  Post,
+  Put,
+  Delete,
   Body,
   Param,
   Query,
   UseGuards,
   Request,
+  Patch,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { QueryJobDto } from './dto/query-job.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-// Import your auth guard (adjust path as needed)
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// import { RolesGuard } from '../auth/guards/roles.guard';
-// import { Roles } from '../auth/decorators/roles.decorator';
+import { FilterJobDto } from './dto/filter-job.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('jobs')
-// @UseGuards(JwtAuthGuard, RolesGuard) // Uncomment when you have auth guards
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
-  @Post()
-  @UseGuards(JwtAuthGuard)
-  // @Roles('COMPANY') // Uncomment to restrict to company role only
-  async createJob(
-    @Body() createJobDto: CreateJobDto,
-    @Request() req: any, // Contains authenticated user info
-  ) {
-    // Assuming req.user contains the authenticated user with id
-    console.log('REQ USER = ', req.user);
+  // ============================================
+  // PUBLIC ROUTES
+  // ============================================
 
-    const companyId = req.user.userId;
-    return this.jobsService.createJob(companyId, createJobDto);
-  }
-
-  @Patch(':id')
-  // @Roles('COMPANY') // Uncomment to restrict to company role only
-  async updateJob(
-    @Param('id') jobId: string,
-    @Body() updateJobDto: UpdateJobDto,
-    @Request() req: any,
-  ) {
-    const companyId = req.user.userId;
-    return this.jobsService.updateJob(jobId, companyId, updateJobDto);
-  }
-
+  // Get all jobs (with filters)
   @Get()
-  async getAllJobs(@Query() queryDto: QueryJobDto) {
-    return this.jobsService.getAllJobs(queryDto);
+  findAll(@Query() filterDto: FilterJobDto) {
+    return this.jobsService.findAll(filterDto);
   }
 
-  @Get('company/my-jobs')
-  // @Roles('COMPANY') // Uncomment to restrict to company role only
-  async getMyJobs(@Query() queryDto: QueryJobDto, @Request() req: any) {
-    const companyId = req.user.userId;
-    return this.jobsService.getJobsByCompany(companyId, queryDto);
-  }
-
+  // Get job by ID
   @Get(':id')
-  async getJobById(@Param('id') jobId: string) {
-    return this.jobsService.getJobById(jobId);
+  findOne(@Param('id') id: string) {
+    return this.jobsService.findOne(id);
+  }
+
+  // Get job by slug
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string) {
+    return this.jobsService.findBySlug(slug);
+  }
+
+  // Get similar jobs
+  @Get(':id/similar')
+  findSimilar(@Param('id') id: string, @Query('limit') limit?: string) {
+    return this.jobsService.findSimilar(id, limit ? parseInt(limit) : 5);
+  }
+
+  // Get jobs by company
+  @Get('company/:companyId')
+  findCompanyJobs(
+    @Param('companyId') companyId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.jobsService.findCompanyJobs(
+      companyId,
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 10,
+    );
+  }
+
+  // ============================================
+  // PROTECTED ROUTES (Requires Authentication)
+  // ============================================
+
+  // Create new job (EMPLOYER, ADMIN only)
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('EMPLOYER', 'ADMIN')
+  create(@Request() req: any, @Body() createJobDto: CreateJobDto) {
+    console.log('USER:', req.user);
+    return this.jobsService.create(req.user.userId, createJobDto);
+  }
+
+  // Get user's posted jobs
+  @Get('my/posted')
+  @UseGuards(JwtAuthGuard)
+  findUserJobs(
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.jobsService.findUserJobs(
+      req.user.userId,
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 10,
+    );
+  }
+
+  // Update job
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  update(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() updateJobDto: UpdateJobDto,
+  ) {
+    return this.jobsService.update(id, req.user.id, updateJobDto);
+  }
+
+  // Toggle job active status
+  @Patch(':id/toggle-active')
+  @UseGuards(JwtAuthGuard)
+  toggleActive(@Param('id') id: string, @Request() req) {
+    return this.jobsService.toggleActive(id, req.user.userId);
+  }
+
+  // Get job statistics
+  @Get(':id/stats')
+  @UseGuards(JwtAuthGuard)
+  getJobStats(@Param('id') id: string, @Request() req) {
+    return this.jobsService.getJobStats(id, req.user.id);
+  }
+
+  // Delete job (soft delete)
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id') id: string, @Request() req) {
+    return this.jobsService.remove(id, req.user.id);
   }
 }

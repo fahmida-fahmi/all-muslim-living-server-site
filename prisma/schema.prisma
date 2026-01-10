@@ -13,34 +13,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== CORE USER MODEL ====================
-model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  password    String
-  firstName   String
-  lastName    String
-  phone       String?
-  avatar      String?
-  dateOfBirth DateTime?
-  gender      Gender?
+enum CompanyType {
+  JOB_AGENCY
+  RESTAURANT
+  RETAIL_SHOP
+  HEALTH_CLINIC
+  NGO
+  MEDIA
+  OTHER
+}
 
-  // User Role - ONE ROLE PER USER
-  role UserRole @default(USER)
+enum CompanySize {
+  SIZE_1_10
+  SIZE_11_50
+  SIZE_51_200
+  SIZE_201_500
+  SIZE_501_PLUS
+}
 
-  // Timestamps
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  lastLoginAt DateTime?
-
-  // Relations
-  postedJobs   Job[]         @relation("CompanyJobs")
-  applications Application[] @relation("UserApplications")
-  savedJobs    SavedJob[]
-
-  @@index([email])
-  @@index([role])
-  @@map("users")
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
 }
 
 // ==================== ENUMS ====================
@@ -75,60 +69,251 @@ enum JobType {
 }
 
 enum ApplicationStatus {
-  APPLIED
-  IN_REVIEW
-  REJECTED
+  PENDING
+  REVIEWING
+  SHORTLISTED
+  INTERVIEWED
   ACCEPTED
-  NOTAPPLY
+  REJECTED
+  WITHDRAWN
+}
+
+// ==================== CORE USER MODEL ====================
+// model User {
+//   id          String    @id @default(uuid())
+//   email       String    @unique
+//   password    String
+//   firstName   String
+//   lastName    String
+//   phone       String?
+//   avatar      String?
+//   dateOfBirth DateTime?
+//   gender      Gender?
+
+//   // User Role - ONE ROLE PER USER
+//   role UserRole @default(USER)
+
+//   // Timestamps
+//   createdAt   DateTime  @default(now())
+//   updatedAt   DateTime  @updatedAt
+//   lastLoginAt DateTime?
+
+//   // Relations
+//   postedJobs   Job[]         @relation("CompanyJobs")
+//   applications JobApplication[] @relation("UserApplications")
+//   savedJobs    SavedJob[]
+
+//   @@index([email])
+//   @@index([role])
+//   @@map("users")
+// }
+
+model User {
+  id          String    @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String    @unique
+  password    String
+  phone       String?
+  role        UserRole  @default(USER)
+  avatar      String?
+  bio         String?   @db.Text
+  dateOfBirth DateTime?
+  gender      Gender?
+
+  // Location
+  address String?
+  city    String?
+  state   String?
+  zipCode String?
+  country String? @default("Bangladesh")
+
+  // Verification
+  isActive        Boolean   @default(true)
+  isVerified      Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  // Preferences
+  // language String? @default("en")
+  // currency String? @default("BDT")
+  // timezone String? @default("Asia/Dhaka")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  // ============================================
+  // RELATIONS - As Service Provider
+  // ============================================
+  companies      Company[] @relation("UserCompany") // Team member of company
+  ownedCompanies Company[] @relation("CompanyOwner") // Owner of companies
+  postedJobs     Job[]     @relation("JobPoster")
+  // ownedRestaurants Restaurant[]      @relation("RestaurantOwner")
+  // soldProducts     Product[]         @relation("ProductSeller")
+  // healthProviders  HealthProvider[]  @relation("ProviderUser")
+  // writtenBlogs     Blog[]            @relation("BlogAuthor")
+
+  // ============================================
+  // RELATIONS - As Normal User/Customer
+  // ============================================
+  jobApplications JobApplication[] @relation("JobApplicant")
+  // customerOrders   Order[]           @relation("OrderCustomer")
+  // shoppingCart     CartItem[]        @relation("UserCart")
+  // wishlist         Wishlist[]        @relation("UserWishlist")
+  // appointments     Appointment[]     @relation("PatientAppointments")
+  // donations        Donation[]        @relation("Donor")
+  // volunteerRecords VolunteerRecord[] @relation("Volunteer")
+
+  // ============================================
+  // INTERACTIONS - Reviews, Comments, etc.
+  // ============================================
+  // reviews          Review[]          @relation("ReviewAuthor")
+  // blogComments     BlogComment[]     @relation("CommentAuthor")
+  // notifications    Notification[]    @relation("UserNotifications")
+
+  // ============================================
+  // SAVED ITEMS
+  // ============================================
+  savedJobs SavedJob[] @relation("UserSavedJobs")
+
+  // savedRestaurants SavedRestaurant[] @relation("UserSavedRestaurants")
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Company {
+  id          String      @id @default(uuid())
+  name        String
+  slug        String      @unique
+  logo        String?
+  coverImage  String?
+  description String?     @db.Text
+  type        CompanyType
+
+  // Contact Info
+  email    String?
+  phone    String?
+  website  String?
+  linkedIn String?
+  facebook String?
+
+  // Business Info
+  industry String?
+  size     CompanySize?
+  founded  Int?
+  tagline  String?
+
+  // Location
+  address String?
+  city    String?
+  state   String?
+  zipCode String?
+  country String? @default("Bangladesh")
+
+  // Verification
+  // verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt DateTime?
+
+  // Ratings
+  rating       Float? @default(0)
+  totalReviews Int    @default(0)
+
+  // Ownership
+  ownerId String
+  owner   User   @relation("CompanyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Team Members
+  teamMembers User[] @relation("UserCompany")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations based on company type
+  jobs Job[] @relation("CompanyJobs")
+  // restaurants     Restaurant[]     @relation("CompanyRestaurants")
+  // products        Product[]        @relation("CompanyProducts")
+  // healthProviders HealthProvider[] @relation("CompanyHealthProviders")
+  // ngoProjects     NgoProject[]     @relation("CompanyNgoProjects")
+
+  @@index([slug])
+  @@index([type])
+  @@index([city])
+  @@map("companies")
 }
 
 model Job {
-  id           String  @id @default(uuid())
-  title        String
-  description  String  @db.Text
-  requirements String  @db.Text
-  location     String?
-  category     String?
-  type         JobType
+  id               String  @id @default(uuid())
+  title            String
+  slug             String  @unique
+  description      String  @db.Text
+  requirements     String  @db.Text
+  responsibilities String? @db.Text
+  category         String?
 
-  // Foreign key to User (company/employer)
-  companyId String
-  company   User    @relation("CompanyJobs", fields: [companyId], references: [id], onDelete: Cascade)
-  salaryMin Int?
-  salaryMax Int?
-  isClosed  Boolean @default(false)
+  jobType    JobType  @default(FULL_TIME)
+  experience String?
+  education  String?
+  skills     String[]
 
-  // Timestamps 
+  salaryMin      Int?
+  salaryMax      Int?
+  salaryCurrency String?  @default("BDT")
+  benefits       String[]
+
+  location String
+  city     String?
+
+  applicationDeadline DateTime?
+  totalPositions      Int?      @default(1)
+  isActive            Boolean   @default(true)
+  isFeatured          Boolean   @default(false)
+
+  metaTitle       String?
+  metaDescription String?
+
+  views             Int @default(0)
+  applicationsCount Int @default(0)
+
+  companyId String?
+  company   Company? @relation("CompanyJobs", fields: [companyId], references: [id], onDelete: Cascade)
+
+  posterId String
+  poster   User   @relation("JobPoster", fields: [posterId], references: [id])
+
+  applications JobApplication[] @relation("JobApplications")
+  savedJobs    SavedJob[]       @relation("JobSavedJobs")
+
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
-
-  // Relation (add these later when you create these models)
-  applications Application[]
-  savedJobs    SavedJob[]
+  updatedAt DateTime @updatedAt
 
   @@index([companyId])
-  @@index([category])
-  @@index([type])
-  @@index([isClosed])
+  @@index([jobType])
+  @@index([isActive])
   @@map("jobs")
 }
 
 // Placeholder models (you'll create these later)
-model Application {
-  id String @id @default(uuid())
+model JobApplication {
+  id             String            @id @default(uuid())
+  status         ApplicationStatus @default(PENDING)
+  coverLetter    String?           @db.Text
+  resume         String? // File path
+  portfolio      String? // URL
+  expectedSalary Int?
+  availableFrom  DateTime?
 
-  // foreign key to job 
+  // Admin notes
+  adminNotes String?   @db.Text
+  reviewedAt DateTime?
+  reviewedBy String?
+
   jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job   Job    @relation("JobApplications", fields: [jobId], references: [id], onDelete: Cascade)
 
-  // foreign key to user (applicant)
   applicantId String
-  applicant   User   @relation("UserApplications", fields: [applicantId], references: [id], onDelete: Cascade)
+  applicant   User   @relation("JobApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
 
-  resume String? //URL or file path
-  status ApplicationStatus @default(NOTAPPLY)
-
-  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -136,7 +321,7 @@ model Application {
   @@index([applicantId])
   @@index([jobId])
   @@index([status])
-  @@map("applications")
+  @@map("job_applications")
 }
 
 model SavedJob {
@@ -144,11 +329,11 @@ model SavedJob {
 
   // foreign key to user (jobseeker)
   userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserSavedJobs", fields: [userId], references: [id], onDelete: Cascade)
 
   // foreign key to job
   jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job   Job    @relation("JobSavedJobs", fields: [jobId], references: [id], onDelete: Cascade)
 
   // Timestamps 
   createdAt DateTime @default(now())

@@ -7,6 +7,11 @@ import { UsersModule } from './users/users.module';
 import { UserService } from './users/users.service';
 import { AuthModule } from './auth/auth.module';
 import { JobsModule } from './jobs/jobs.module';
+import { CompanyController } from './company/company.controller';
+import { CompanyService } from './company/company.service';
+import { JobApplicationsModule } from './job-applications/job-applications.module';
+import { SavedJobsController } from './saved-jobs/saved-jobs.controller';
+import { SavedJobsService } from './saved-jobs/saved-jobs.service';
 
 @Module({
   imports: [
@@ -15,8 +20,9 @@ import { JobsModule } from './jobs/jobs.module';
     UsersModule,
     AuthModule,
     JobsModule,
+    JobApplicationsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, UserService],
+  controllers: [AppController, CompanyController, SavedJobsController],
+  providers: [AppService, UserService, CompanyService, SavedJobsService],
 })
 export class AppModule {}
