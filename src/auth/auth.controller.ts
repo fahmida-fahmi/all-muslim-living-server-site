@@ -90,39 +90,3 @@ export class AuthController {
     return this.authService.getProfile(req.user.userId);
   }
 }
-
-// ==================== CALLBACK CHEAT SHEET ====================
-/*
-
-The cb() callback in multer ALWAYS needs 2 arguments:
-
-✅ CORRECT PATTERNS:
-
-1. REJECT - Invalid type
-   cb(new BadRequestException('...'), false);
-
-2. REJECT - File too large
-   cb(new BadRequestException('...'), false);
-
-3. ACCEPT - File is good
-   cb(null, true);
-
-4. ERROR - Unexpected error
-   cb(new Error('Unexpected error'), false);
-
-❌ WRONG PATTERNS:
-
-1. Only passing error (WRONG!)
-   cb(new BadRequestException('...'));  // Missing 2nd argument!
-
-2. No arguments (WRONG!)
-   cb();  // Missing both arguments!
-
-3. Only passing true/false (WRONG!)
-   cb(true);  // Missing error argument!
-
-REMEMBER: cb(error, acceptFile)
-  - First param: Error object (or null if no error)
-  - Second param: Boolean - true to accept, false to reject
-
-*/

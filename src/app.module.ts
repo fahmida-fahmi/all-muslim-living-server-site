@@ -15,7 +15,11 @@ import { SavedJobsService } from './saved-jobs/saved-jobs.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath:
+        process.env.NODE_ENV === 'production' ? '.env.docker' : '.env',
+    }),
     PrismaModule,
     UsersModule,
     AuthModule,
