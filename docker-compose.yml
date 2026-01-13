@@ -24,7 +24,7 @@ services:
     container_name: nest_backend
     restart: always
     ports:
-      - "4000:4000"
+      - "4001:4000"
     depends_on:
       db:
         condition: service_healthy
