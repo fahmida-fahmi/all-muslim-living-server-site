@@ -1,33 +1,44 @@
-# Use Node.js LTS
-FROM node:20-alpine
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
-# Create app directory
 WORKDIR /app
 
-# Install dependencies first (better caching)
+# Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --only=production
+# Install all dependencies
+RUN npm ci
 
-# Generate Prisma client
-# RUN npx prisma generate
+# Generate Prisma Client
+RUN npx prisma generate
 
-# Copy source code
+# Copy source
 COPY . .
 
-# Build NestJS
+# Build application
 RUN npm run build
 
-# Remove dev dependencies to reduce image size
-RUN npm prune --production
+# Stage 2: Production
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Generate Prisma Client in production stage
+RUN npx prisma generate
+
+# Copy built application from builder
+COPY --from=builder /app/dist ./dist
 
 # Expose port
 EXPOSE 4000
 
-# Health check (optional but good practice)
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Run app
+# Start the application
 CMD ["npm", "run", "start:prod"]
