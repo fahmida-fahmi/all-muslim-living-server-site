@@ -2,8 +2,10 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto';
+import { UserRole } from '@prisma/client';
+
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
@@ -27,29 +29,29 @@ export class UserService {
         dateOfBirth: createUserDto.dateOfBirth
           ? new Date(createUserDto.dateOfBirth)
           : null,
-        role: createUserDto.role || "USER",
+        role: createUserDto.role || UserRole.USER,
       },
     });
 
     const { password, ...result } = user;
-    return result
+    return result;
   }
 
   //  Get all users
-  async getAllUsers(page = 1, limit= 10) {
-    const skip = (page -1) * limit;
+  async getAllUsers(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
-        skip, 
+        skip,
         take: limit,
-        orderBy: { createdAt: 'desc'},
-        select:{
+        orderBy: { createdAt: 'desc' },
+        select: {
           id: true,
           email: true,
           firstName: true,
           lastName: true,
-          phone: true, 
+          phone: true,
           avatar: true,
           dateOfBirth: true,
           role: true,
@@ -57,25 +59,24 @@ export class UserService {
           updatedAt: true,
           lastLoginAt: true,
         },
-        
       }),
       this.prisma.user.count(),
-    ])
+    ]);
     return {
       data: users,
       meta: {
         total,
         page,
         limit,
-        totalPages: Math.ceil( total / limit),
-      }
-    }
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   //  Get user by ID
   async getUserById(id: string) {
     const user = await this.prisma.user.findUnique({
-      where: {id},
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -91,26 +92,28 @@ export class UserService {
       },
     });
 
-    if(!user) {
+    if (!user) {
       throw new ConflictException('User not found');
     }
     return user;
   }
 
-  //update user by id 
+  //update user by id
 
   async updateUser(id: string, updateUserDto: UpdateUserDto) {
     await this.getUserById(id);
 
-    if(updateUserDto.password) {
+    if (updateUserDto.password) {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
 
     const user = await this.prisma.user.update({
-      where:{id},
+      where: { id },
       data: {
         ...updateUserDto,
-        dateOfBirth: updateUserDto.dateOfBirth ? new Date(updateUserDto.dateOfBirth) : undefined,
+        dateOfBirth: updateUserDto.dateOfBirth
+          ? new Date(updateUserDto.dateOfBirth)
+          : undefined,
       },
       select: {
         id: true,
@@ -127,22 +130,16 @@ export class UserService {
       },
     });
     return user;
-
   }
 
-  async remove( id: string ) {
-    const existingUser = await this.getUserById( id );
-
+  async remove(id: string) {
+    const existingUser = await this.getUserById(id);
 
     await this.prisma.user.delete({
-      where: {id}
+      where: { id },
     });
     return {
-      message: 'User deleted successfully'
-    }
+      message: 'User deleted successfully',
+    };
   }
-
-  
-
-
 }

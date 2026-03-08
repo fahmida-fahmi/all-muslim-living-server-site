@@ -4,7 +4,7 @@ services:
     container_name: nest_postgres
     restart: always
     ports:
-      - "5433:5432"  # 5432 এর জায়গায় 5433 use করুন
+      - "5432:5432"  # 5432 এর জায়গায় 5433 use করুন
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -24,16 +24,12 @@ services:
     container_name: nest_backend
     restart: always
     ports:
-      - "4001:4000"
+      - "4000:4000"
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      # DATABASE_URL same থাকবে কারণ এটা internal network
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/mydb
-      - JWT_SECRET=your-secret-key-here-change-this
-      - PORT=4000
-      - NODE_ENV=production
+    env_file:
+      - .env.docker
     networks:
       - app-network
 

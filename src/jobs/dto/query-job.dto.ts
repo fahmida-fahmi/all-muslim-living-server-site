@@ -8,7 +8,7 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { JobType } from '@prisma/client';
+import { JobType } from '../../common/enums';
 
 export class QueryJobDto {
   @IsOptional()

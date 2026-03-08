@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsUrl, IsNumber } from 'class-validator';
-import { CompanyType, CompanySize } from '@prisma/client';
+import { CompanyType, CompanySize } from '../../common/enums';
 import { Transform } from 'class-transformer';
 
 export class CreateCompanyDto {

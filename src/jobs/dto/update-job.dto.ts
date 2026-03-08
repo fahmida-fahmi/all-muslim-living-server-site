@@ -8,7 +8,7 @@ import {
   IsDateString,
   IsArray,
 } from 'class-validator';
-import { JobType } from '@prisma/client';
+import { JobType } from '../../common/enums';
 import { Transform, Type } from 'class-transformer';
 
 export class UpdateJobDto {
@@ -81,6 +81,10 @@ export class UpdateJobDto {
   @IsString()
   @IsOptional()
   location?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
 
   @IsOptional()
   @IsDateString()

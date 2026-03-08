@@ -24,18 +24,14 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy production dependencies
 COPY package*.json ./
-COPY prisma ./prisma/
-
-# Install only production dependencies
 RUN npm ci --only=production
 
-# Generate Prisma Client in production stage
-RUN npx prisma generate
-
-# Copy built application from builder
+# Copy built application & Prisma client from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma ./prisma
 
 # Expose port
 EXPOSE 4000

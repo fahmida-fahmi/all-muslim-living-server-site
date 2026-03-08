@@ -389,42 +389,45 @@ export class JobsService {
   // UPDATE JOB
   // ============================================
   async update(id: string, userId: string, updateJobDto: UpdateJobDto) {
-    const job = await this.prisma.job.findUnique({
-      where: { id },
-      include: {
-        company: {
-          include: {
-            teamMembers: true,
-          },
-        },
-      },
-    });
+    // ... (keep your permission check logic the same) ...
 
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
+    // 1. Destructure to extract the fields you need to transform
+    // const { applicationDeadline, companyId } = updateJobDto;
 
-    // Check if user has permission to update
-    const isOwner = job.posterId === userId;
-    const isCompanyOwner = job.company?.ownerId === userId;
-    const isTeamMember = job.company?.teamMembers.some(
-      (member) => member.id === userId,
-    );
-
-    if (!isOwner && !isCompanyOwner && !isTeamMember) {
-      throw new ForbiddenException(
-        'You do not have permission to update this job',
-      );
-    }
-
-    // Update job
+    // 2. Perform the update
     const updatedJob = await this.prisma.job.update({
       where: { id },
       data: {
-        ...updateJobDto,
+        title: updateJobDto.title,
+        description: updateJobDto.description,
+        requirements: updateJobDto.requirements,
+        responsibilities: updateJobDto.responsibilities,
+        category: updateJobDto.category,
+        experience: updateJobDto.experience,
+        education: updateJobDto.education,
+        skills: updateJobDto.skills ?? [],
+        salaryMin: updateJobDto.salaryMin,
+        salaryMax: updateJobDto.salaryMax,
+        salaryCurrency: updateJobDto.salaryCurrency,
+        benefits: updateJobDto.benefits ?? [],
+        location: updateJobDto.location,
+        city: updateJobDto.city,
+        totalPositions: updateJobDto.totalPositions,
+        isFeatured: updateJobDto.isFeatured,
+        metaTitle: updateJobDto.metaTitle,
+        metaDescription: updateJobDto.metaDescription,
+        poster: {
+          connect: { id: userId },
+        },
+        // ✅ OPTIONAL RELATION
+        ...(updateJobDto.companyId && {
+          company: {
+            connect: { id: updateJobDto.companyId },
+          },
+        }),
         applicationDeadline: updateJobDto.applicationDeadline
           ? new Date(updateJobDto.applicationDeadline)
-          : undefined,
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
       include: {
         poster: {

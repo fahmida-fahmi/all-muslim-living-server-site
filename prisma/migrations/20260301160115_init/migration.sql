@@ -1,4 +1,13 @@
 -- CreateEnum
+CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE', 'PREFER_NOT_TO_SAY');
+
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('USER', 'JOB_SEEKER', 'EMPLOYER', 'SERVICE_PROVIDER', 'BUSINESS_OWNER', 'WRITER', 'EVENT_ORGANIZER', 'CHARITY_ORG', 'VOLUNTEER', 'PRAYER_PLACE_ADMIN', 'MATRIMONY_SEEKER', 'ADMIN', 'SUPER_ADMIN');
+
+-- CreateEnum
+CREATE TYPE "JobType" AS ENUM ('REMOTE', 'FULL_TIME', 'PART_TIME', 'INTERNSHIP', 'CONTRACT');
+
+-- CreateEnum
 CREATE TYPE "CompanyType" AS ENUM ('JOB_AGENCY', 'RESTAURANT', 'RETAIL_SHOP', 'HEALTH_CLINIC', 'NGO', 'MEDIA', 'OTHER');
 
 -- CreateEnum
@@ -8,16 +17,49 @@ CREATE TYPE "CompanySize" AS ENUM ('SIZE_1_10', 'SIZE_11_50', 'SIZE_51_200', 'SI
 CREATE TYPE "VerificationStatus" AS ENUM ('PENDING', 'VERIFIED', 'REJECTED');
 
 -- CreateEnum
-CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE', 'PREFER_NOT_TO_SAY');
-
--- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('USER', 'JOB_SEEKER', 'EMPLOYER', 'SERVICE_PROVIDER', 'BUSINESS_OWNER', 'WRITER', 'EVENT_ORGANIZER', 'CHARITY_ORG', 'VOLUNTEER', 'PRAYER_PLACE_ADMIN', 'MATRIMONY_SEEKER', 'ADMIN', 'SUPER_ADMIN');
-
--- CreateEnum
-CREATE TYPE "JobType" AS ENUM ('REMOTE', 'FULL_TIME', 'PART_TIME', 'INTERSHIP', 'CONTRACT');
-
--- CreateEnum
 CREATE TYPE "ApplicationStatus" AS ENUM ('PENDING', 'REVIEWING', 'SHORTLISTED', 'INTERVIEWED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN');
+
+-- CreateEnum
+CREATE TYPE "GenderForBiodata" AS ENUM ('MALE', 'FEMALE', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "ProfileFor" AS ENUM ('SELF', 'SON', 'DAUGHTER', 'BROTHER', 'SISTER');
+
+-- CreateEnum
+CREATE TYPE "MaritalStatus" AS ENUM ('SINGLE', 'DIVORCED', 'WIDOWED', 'AWAITING_DIVORCE', 'SEPARATED');
+
+-- CreateEnum
+CREATE TYPE "Religion" AS ENUM ('HINDUISM', 'ISLAM', 'CHRISTIANITY', 'SIKHISM', 'BUDDHISM', 'JUDAISM', 'JAINISM', 'SHINTO', 'TAOISM', 'ZOROASTRIANISM', 'BAHAI_FAITH', 'CONFUCIANISM', 'ANIMISM', 'PAGANISM', 'RASTAFARIANISM');
+
+-- CreateEnum
+CREATE TYPE "VisaStatus" AS ENUM ('CITIZEN', 'LEGAL_PERMANENT_RESIDENT', 'WORK_VISA', 'STUDENT_VISA', 'VISITOR_VISA', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "YesNo" AS ENUM ('YES', 'NO');
+
+-- CreateEnum
+CREATE TYPE "CoveringOption" AS ENUM ('YES', 'NO', 'SOMETIMES');
+
+-- CreateEnum
+CREATE TYPE "BeardOption" AS ENUM ('YES', 'NO', 'TRIMMIED');
+
+-- CreateEnum
+CREATE TYPE "SmokeOption" AS ENUM ('DO_NOT_SMOKE', 'OCCASIONALLY', 'SOCIAL_SMOKER', 'REGULAR_SMOKER', 'TRYING_TO_QUIT');
+
+-- CreateEnum
+CREATE TYPE "DrinkOption" AS ENUM ('DO_NOT_DRINK', 'OCCASIONAL_DRINKER', 'SOCIAL_DRINKER', 'REGULAR_DRINKER');
+
+-- CreateEnum
+CREATE TYPE "DietType" AS ENUM ('VEGETARIAN', 'NON_VEGETARIAN', 'VEGAN', 'EGGETARIAN', 'PESCATARIAN', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "Complexion" AS ENUM ('VERY_FAIR', 'FAIR', 'LIGHT', 'LIGHT_BROWN', 'WHEATISH', 'WHEATISH_BROWN', 'MEDIUM_BROWN', 'BROWN', 'DARK_BROWN', 'DARK', 'OLIVE', 'DUSKY', 'EBONY', 'CARAMEL', 'HONEY', 'COPPER', 'BRONZE');
+
+-- CreateEnum
+CREATE TYPE "FinancialStatus" AS ENUM ('POOR', 'LOWER_MIDDLE', 'MIDDLE_CLASS', 'UPPER_MIDDLE', 'AFFLUENT', 'WEALTHY');
+
+-- CreateEnum
+CREATE TYPE "ContactVisibility" AS ENUM ('VISIBLE_TO_EVERYONE', 'PAID_MEMBERS_ONLY');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -43,6 +85,7 @@ CREATE TABLE "users" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "lastLoginAt" TIMESTAMP(3),
+    "biodataId" TEXT,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -147,6 +190,86 @@ CREATE TABLE "saved_jobs" (
 );
 
 -- CreateTable
+CREATE TABLE "Biodata" (
+    "id" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "firstName" TEXT,
+    "lastName" TEXT,
+    "gender" "GenderForBiodata",
+    "profileFor" "ProfileFor",
+    "maritalStatus" "MaritalStatus",
+    "birthMonth" TEXT,
+    "birthDay" TEXT,
+    "birthYear" TEXT,
+    "religion" "Religion",
+    "educationLevel" TEXT,
+    "country" TEXT,
+    "email" TEXT,
+    "city" TEXT,
+    "nationality" TEXT,
+    "placeOfBirth" TEXT,
+    "visaStatus" "VisaStatus",
+    "livingWithFamily" "YesNo",
+    "familyCountry" TEXT,
+    "familyCity" TEXT,
+    "height" TEXT,
+    "weight" TEXT,
+    "complexion" "Complexion",
+    "diet" "DietType",
+    "drink" "DrinkOption",
+    "smoke" "SmokeOption",
+    "hijab" "CoveringOption",
+    "niqab" "CoveringOption",
+    "beard" "BeardOption",
+    "languages" TEXT[],
+    "skills" TEXT[],
+    "fieldOfStudy" TEXT,
+    "institution" TEXT,
+    "graduationYear" TEXT,
+    "otherQualifications" TEXT,
+    "occupation" TEXT,
+    "professionDescription" TEXT,
+    "monthlyIncome" TEXT,
+    "fatherName" TEXT,
+    "fatherAlive" "YesNo",
+    "fatherProfession" TEXT,
+    "motherName" TEXT,
+    "motherAlive" "YesNo",
+    "motherProfession" TEXT,
+    "brothersCount" TEXT,
+    "sistersCount" TEXT,
+    "financialStatus" "FinancialStatus",
+    "religiousCondition" TEXT,
+    "partnerAgeMin" INTEGER,
+    "partnerAgeMax" INTEGER,
+    "partnerComplexion" "Complexion",
+    "partnerHeight" TEXT,
+    "partnerMaritalStatus" "MaritalStatus",
+    "partnerReligion" "Religion",
+    "partnerEducation" TEXT,
+    "partnerProfession" TEXT[],
+    "partnerCountries" TEXT[],
+    "partnerDrink" "DrinkOption",
+    "partnerSmoke" "SmokeOption",
+    "partnerResidency" TEXT,
+    "partnerExpectations" TEXT,
+    "contactName" TEXT,
+    "phone" TEXT,
+    "contactEmail" TEXT,
+    "guardianName" TEXT,
+    "guardianPhone" TEXT,
+    "guardianRelation" TEXT,
+    "contactVisibility" "ContactVisibility",
+    "truthPledge" BOOLEAN NOT NULL DEFAULT false,
+    "parentConsent" BOOLEAN NOT NULL DEFAULT false,
+    "falseInfoAgreement" BOOLEAN NOT NULL DEFAULT false,
+    "lastCompletedStep" INTEGER,
+
+    CONSTRAINT "Biodata_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_UserCompany" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -210,6 +333,9 @@ CREATE UNIQUE INDEX "saved_jobs_userId_jobId_key" ON "saved_jobs"("userId", "job
 
 -- CreateIndex
 CREATE INDEX "_UserCompany_B_index" ON "_UserCompany"("B");
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "companies" ADD CONSTRAINT "companies_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

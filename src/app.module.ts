@@ -12,6 +12,8 @@ import { CompanyService } from './company/company.service';
 import { JobApplicationsModule } from './job-applications/job-applications.module';
 import { SavedJobsController } from './saved-jobs/saved-jobs.controller';
 import { SavedJobsService } from './saved-jobs/saved-jobs.service';
+import { BiodataService } from './biodata/biodata.service';
+import { BiodataModule } from './biodata/biodata.module';
 
 @Module({
   imports: [
@@ -25,8 +27,9 @@ import { SavedJobsService } from './saved-jobs/saved-jobs.service';
     AuthModule,
     JobsModule,
     JobApplicationsModule,
+    BiodataModule,
   ],
   controllers: [AppController, CompanyController, SavedJobsController],
-  providers: [AppService, UserService, CompanyService, SavedJobsService],
+  providers: [AppService, UserService, CompanyService, SavedJobsService, BiodataService],
 })
 export class AppModule {}

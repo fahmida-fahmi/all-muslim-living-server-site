@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,6 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum UserRole {
+  USER // General user
+  JOB_SEEKER // Looking for jobs
+  EMPLOYER // Posting jobs
+  SERVICE_PROVIDER // Offering services
+  BUSINESS_OWNER // Restaurant, Shop, Health center owner
+  WRITER // Writer's corner contributor
+  EVENT_ORGANIZER // Organizing events
+  CHARITY_ORG // Charity organization
+  VOLUNTEER // Volunteer for charity
+  PRAYER_PLACE_ADMIN // Managing prayer places
+  MATRIMONY_SEEKER // Looking for marriage
+  ADMIN // Platform admin
+  SUPER_ADMIN // Super admin
+}
+
+// ==================== ENUMS for JOB====================
+
+enum JobType {
+  REMOTE
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  CONTRACT
+}
 
 enum CompanyType {
   JOB_AGENCY
@@ -38,37 +63,6 @@ enum VerificationStatus {
   REJECTED
 }
 
-// ==================== ENUMS ====================
-enum Gender {
-  MALE
-  FEMALE
-  PREFER_NOT_TO_SAY
-}
-
-enum UserRole {
-  USER // General user
-  JOB_SEEKER // Looking for jobs
-  EMPLOYER // Posting jobs
-  SERVICE_PROVIDER // Offering services
-  BUSINESS_OWNER // Restaurant, Shop, Health center owner
-  WRITER // Writer's corner contributor
-  EVENT_ORGANIZER // Organizing events
-  CHARITY_ORG // Charity organization
-  VOLUNTEER // Volunteer for charity
-  PRAYER_PLACE_ADMIN // Managing prayer places
-  MATRIMONY_SEEKER // Looking for marriage
-  ADMIN // Platform admin
-  SUPER_ADMIN // Super admin
-}
-
-enum JobType {
-  REMOTE
-  FULL_TIME
-  PART_TIME
-  INTERSHIP
-  CONTRACT
-}
-
 enum ApplicationStatus {
   PENDING
   REVIEWING
@@ -79,35 +73,142 @@ enum ApplicationStatus {
   WITHDRAWN
 }
 
-// ==================== CORE USER MODEL ====================
-// model User {
-//   id          String    @id @default(uuid())
-//   email       String    @unique
-//   password    String
-//   firstName   String
-//   lastName    String
-//   phone       String?
-//   avatar      String?
-//   dateOfBirth DateTime?
-//   gender      Gender?
+// ==================== ENUMS for BIODATA====================
 
-//   // User Role - ONE ROLE PER USER
-//   role UserRole @default(USER)
+enum GenderForBiodata {
+  MALE
+  FEMALE
+  OTHER
+}
 
-//   // Timestamps
-//   createdAt   DateTime  @default(now())
-//   updatedAt   DateTime  @updatedAt
-//   lastLoginAt DateTime?
+enum ProfileFor {
+  MYSELF
+  SON
+  DAUGHTER
+  BROTHER
+  SISTER
+  NEPHEW
+  NIECE
+  FRIEND
+  OTHER
+}
 
-//   // Relations
-//   postedJobs   Job[]         @relation("CompanyJobs")
-//   applications JobApplication[] @relation("UserApplications")
-//   savedJobs    SavedJob[]
+enum MaritalStatus {
+  SINGLE
+  DIVORCED
+  WIDOWED
+  AWAITING_DIVORCE
+  SEPARATED
+}
 
-//   @@index([email])
-//   @@index([role])
-//   @@map("users")
-// }
+enum Religion {
+  HINDUISM
+  ISLAM
+  CHRISTIANITY
+  SIKHISM
+  BUDDHISM
+  JUDAISM
+  JAINISM
+  SHINTO
+  TAOISM
+  ZOROASTRIANISM
+  BAHAI_FAITH
+  CONFUCIANISM
+  ANIMISM
+  PAGANISM
+  RASTAFARIANISM
+}
+
+enum VisaStatus {
+  CITIZEN
+  LEGAL_PERMANENT_RESIDENT
+  WORK_VISA
+  STUDENT_VISA
+  VISITOR_VISA
+  OTHER
+}
+
+enum YesNo {
+  YES
+  NO
+}
+
+enum CoveringOption {
+  YES
+  NO
+  SOMETIMES
+}
+
+enum BeardOption {
+  YES
+  NO
+  TRIMMIED
+}
+
+enum SmokeOption {
+  DO_NOT_SMOKE
+  OCCASIONALLY
+  SOCIAL_SMOKER
+  REGULAR_SMOKER
+  TRYING_TO_QUIT
+}
+
+enum DrinkOption {
+  DO_NOT_DRINK
+  OCCASIONAL_DRINKER
+  SOCIAL_DRINKER
+  REGULAR_DRINKER
+}
+
+enum DietType {
+  VEGETARIAN
+  NON_VEGETARIAN
+  VEGAN
+  EGGETARIAN
+  PESCATARIAN
+  OTHER
+}
+
+enum Complexion {
+  VERY_FAIR
+  FAIR
+  LIGHT
+  LIGHT_BROWN
+  WHEATISH
+  WHEATISH_BROWN
+  MEDIUM_BROWN
+  BROWN
+  DARK_BROWN
+  DARK
+  OLIVE
+  DUSKY
+  EBONY
+  CARAMEL
+  HONEY
+  COPPER
+  BRONZE
+}
+
+enum FinancialStatus {
+  POOR
+  LOWER_MIDDLE
+  MIDDLE_CLASS
+  UPPER_MIDDLE
+  AFFLUENT
+  WEALTHY
+}
+
+enum ContactVisibility {
+  VISIBLE_TO_EVERYONE
+  PAID_MEMBERS_ONLY
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+// ==================== MODELS====================
 
 model User {
   id          String    @id @default(uuid())
@@ -142,6 +243,11 @@ model User {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
+
+  // Matrimony specific fields
+  biodata     Biodata?  
+
+  shortlists Shortlist[] @relation("UserShortlist")
 
   // ============================================
   // RELATIONS - As Service Provider
@@ -345,3 +451,164 @@ model SavedJob {
   @@index([jobId])
   @@map("saved_jobs")
 }
+
+// ─────────────────────────────
+// BIODATA MODEL
+// ─────────────────────────────
+
+model Biodata {
+  id        String   @id @default(cuid())
+  customId  String? @unique // Custom ID like "M1234" or "F5678"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ─────────────────────────────
+  // STEP 1 — BASIC INFO
+  // ─────────────────────────────
+  firstName      String?
+  lastName       String?
+  gender         GenderForBiodata?
+  profileFor     ProfileFor?
+  maritalStatus  MaritalStatus?
+  birthMonth     String?
+  birthDay       String?
+  birthYear      String?
+  religion       Religion?
+  educationLevel String?
+  country        String?
+  email          String?
+
+  // ─────────────────────────────
+  // STEP 2 — LOCATION
+  // ─────────────────────────────
+  city             String?
+  nationality      String?
+  placeOfBirth     String?
+  visaStatus       VisaStatus?
+  livingWithFamily YesNo?
+  familyCountry    String?
+  familyCity       String?
+
+  // ─────────────────────────────
+  // STEP 3 — APPEARANCE
+  // ─────────────────────────────
+  height     String?
+  weight     String?
+  complexion Complexion?
+  diet       DietType?
+  drink      DrinkOption?
+  smoke      SmokeOption?
+  hijab      CoveringOption?
+  niqab      CoveringOption?
+  beard      BeardOption?
+  languages  String[] // multi select from JSON.languages
+  skills     String[] // multi select from JSON.skills
+
+  // ─────────────────────────────
+  // STEP 4 — EDUCATION
+  // ─────────────────────────────
+  fieldOfStudy        String? // select from JSON.field_of_Study
+  institution         String?
+  graduationYear      String?
+  otherQualifications String?
+
+  // ─────────────────────────────
+  // STEP 5 — CAREER
+  // ─────────────────────────────
+  occupation            String? // select from JSON.professions
+  professionDescription String?
+  monthlyIncome         String? // select from JSON.income_ranges
+
+  // ─────────────────────────────
+  // STEP 6 — FAMILY
+  // ─────────────────────────────
+  fatherName         String?
+  fatherAlive        YesNo?
+  fatherProfession   String? // select from JSON.professions
+  motherName         String?
+  motherAlive        YesNo?
+  motherProfession   String? // select from JSON.professions
+  brothersCount      String?
+  sistersCount       String?
+  financialStatus    FinancialStatus?
+  religiousCondition String?
+
+  // ─────────────────────────────
+  // STEP 7 — PARTNER PREFERENCES
+  // ─────────────────────────────
+  partnerAgeMin        Int?
+  partnerAgeMax        Int?
+  partnerComplexion    Complexion?
+  partnerHeight        String?
+  partnerMaritalStatus MaritalStatus?
+  partnerReligion      Religion?
+  partnerEducation     String? // select from JSON.field_of_Study
+  partnerProfession    String[] // multi select from JSON.professions
+  partnerCountries     String[] // multi select from JSON.countries
+  partnerDrink         DrinkOption?
+  partnerSmoke         SmokeOption?
+  partnerResidency     String?
+  partnerExpectations  String?
+
+  // ─────────────────────────────
+  // STEP 8 — CONTACT
+  // ─────────────────────────────
+  contactName       String?
+  phone             String?
+  contactEmail      String?
+  guardianName      String?
+  guardianPhone     String?
+  guardianRelation  String?
+  contactVisibility ContactVisibility?
+
+  // ─────────────────────────────
+  // STEP 9 — DECLARATION
+  // ─────────────────────────────
+  truthPledge        Boolean @default(false)
+  parentConsent      Boolean @default(false)
+  falseInfoAgreement Boolean @default(false)
+
+  //Interests sent and received
+  sentInterests     Interest[] @relation("SentInterests")
+  receivedInterests Interest[] @relation("ReceivedInterests")
+
+  // Optional: track progress
+  lastCompletedStep Int?
+  user              User  @relation(fields: [userId], references: [id])
+  userId            String @unique
+
+  shortlistedBy Shortlist[] @relation("ShortlistedBiodata")
+}
+
+model Interest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  senderBiodataId   String
+  receiverBiodataId String
+  message           String?
+  status            InterestStatus @default(PENDING)
+
+  senderBiodata   Biodata @relation("SentInterests", fields: [senderBiodataId], references: [id])
+  receiverBiodata Biodata @relation("ReceivedInterests", fields: [receiverBiodataId], references: [id])
+
+  @@unique([senderBiodataId, receiverBiodataId])
+}
+
+model Shortlist {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User    @relation("UserShortlist",      fields: [userId],    references: [id], onDelete: Cascade)
+
+  biodataId String
+  biodata   Biodata @relation("ShortlistedBiodata", fields: [biodataId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, biodataId])
+  @@index([userId])
+  @@index([biodataId])
+  @@map("shortlists")
+}
+

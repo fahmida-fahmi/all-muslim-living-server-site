@@ -9,9 +9,10 @@ import {
   IsBoolean,
   IsArray,
   ValidateIf,
+  IsIn,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { JobType } from '@prisma/client';
+import { JobType } from '../../common/enums';
 
 export class CreateJobDto {
   // ================= BASIC =================
@@ -37,6 +38,7 @@ export class CreateJobDto {
 
   // ================= JOB DETAILS =================
   @IsEnum(JobType)
+  @IsIn(Object.values(JobType))
   jobType: JobType;
 
   @IsOptional()
@@ -51,9 +53,7 @@ export class CreateJobDto {
   @IsArray()
   @IsString({ each: true })
   @Transform(({ value }) =>
-    typeof value === 'string'
-      ? value.split(',').map((s) => s.trim())
-      : value,
+    typeof value === 'string' ? value.split(',').map((s) => s.trim()) : value,
   )
   skills?: string[];
 
